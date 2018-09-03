@@ -47,6 +47,8 @@ try:
     data_directory = '{}/{}/{}'.format(base_directory, 'fish_id_{}_side_{}'.format(optical_inputs['fish_id'], optical_inputs['side']), 'batch_id_{}'.format(optical_inputs['batch_id']))
     if not os.path.exists(data_directory):
         os.makedirs(data_directory)
+    else:
+        raise Exception('This data collection has already been conducted! Please check the batch_id.')
     settings_file = configuration_details['settings_file']
     node_map = camera.GetNodeMap()
     pylon.FeaturePersistence.Load(settings_file, node_map, True)
@@ -54,7 +56,7 @@ try:
     # save all optical inputs 
     pylon.FeaturePersistence.Save('{}/settings.pfs'.format(data_directory), node_map)
     with open('{}/optical_inputs.json'.format(data_directory), 'w') as f:
-        json.dump(optical_inputs, f)
+        json.dump(optical_inputs, f, indent=4)
 
     
     
@@ -79,7 +81,9 @@ try:
                     i += 1
                 else:
                     timestamp = dt.datetime.fromtimestamp(time.time()).strftime('%Y%m%dT%H%M%S')
-                    cv2.imwrite('{}/{}'.format(data_directory, '{}_gain_auto_exposure_auto.jpg'.format(timestamp)), img)
+                    f_name = '{}/{}'.format(data_directory, '{}_gain_auto_exposure_auto.jpg'.format(timestamp))
+                    print('Writing image to {}'.format(f_name))
+                    cv2.imwrite(f_name, img)
                     print("Auto settings images captured!")
                     break
                 grabResult.Release()
@@ -119,7 +123,9 @@ try:
             else:
                 print(exposure_time_abs.GetValue(), gain_raw.GetValue())
                 timestamp = dt.datetime.fromtimestamp(time.time()).strftime('%Y%m%dT%H%M%S')
-                cv2.imwrite('{}/{}'.format(data_directory, '{}_gain_{}_exposure_{}.jpg'.format(timestamp, gain, exposure)), img)
+                f_name = '{}/{}'.format(data_directory, '{}_gain_{}_exposure_{}.jpg'.format(timestamp, gain, exposure))
+                print('Writing image to {}'.format(f_name))
+                cv2.imwrite(f_name, img)
                 i += 1
             grabResult.Release()
             if i >= number_of_images_to_capture:
