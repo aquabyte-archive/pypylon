@@ -1,4 +1,20 @@
 {
-	"base_directory": "/aquabyte_data/pylon/slrc",
-	"settings_file": "/home/ubuntu/alok/pypylon/aquabyte/data_collection_settings.pfs"
+	"farm_id": 0,
+	"farm_name": "staging-farm",
+	"enclosures": [
+		{
+			"enclosure_id": 0,
+			"pen_id": 0,
+			"pen_name": "pen-1",
+			"left_camera_details": {
+				"serial_number": "40008362",
+				"ip_address": "10.11.14.85"
+			}, 
+			"right_camera_details": {
+				"serial_number": "40006816",
+				"ip_address": "10.11.14.28" 
+			}
+		}
+	],
+	"base_directory": "/aquabyte_data/pylon"
 }

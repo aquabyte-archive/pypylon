@@ -24,13 +24,10 @@ from pypylon import pylon
 from pypylon import genicam
 
 
-
 exitCode = 0
 
 try:
     # Create an instant camera object with the camera device found first.
-    optical_inputs = json.load(open('./optical_inputs.json', 'r'))
-    print(json.dumps(optical_inputs, indent=4))
     camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
     camera.Open()
     converter = pylon.ImageFormatConverter()
@@ -42,66 +39,20 @@ try:
     print("Using device ", camera.GetDeviceInfo().GetModelName())
 
     # get configuration details
-    configuration_details = json.load(open('./config.json', 'r'))
-    base_directory = configuration_details['base_directory']
-    data_directory = '{}/{}/{}'.format(base_directory, 'fish_id_{}_side_{}'.format(optical_inputs['fish_id'], optical_inputs['side']), 'batch_id_{}'.format(optical_inputs['batch_id']))
-    if not os.path.exists(data_directory):
-        os.makedirs(data_directory)
-    else:
-        raise Exception('This data collection has already been conducted! Please check the batch_id.')
-    settings_file = configuration_details['settings_file']
+    config = json.load(open('/root/config/config.json', 'r'))
+    base_directory = config['base_directory']
+    
+    farm_data_directory = os.path.join(base_directory, config['farm_name'])
+    if not os.path.exists(farm_data_directory):
+        os.makedirs(farm_data_directory)
+    settings_file = '/root/config/settings.pfs'
     node_map = camera.GetNodeMap()
     pylon.FeaturePersistence.Load(settings_file, node_map, True)
 
     # save all optical inputs 
-    pylon.FeaturePersistence.Save('{}/settings.pfs'.format(data_directory), node_map)
-    with open('{}/optical_inputs.json'.format(data_directory), 'w') as f:
-        json.dump(optical_inputs, f, indent=4)
-
-    
-    
-
-    # The parameter MaxNumBuffer can be used to control the count of buffers
-    # allocated for grabbing. The default value of this parameter is 10.
-    camera.MaxNumBuffer = 5
-
-    if optical_inputs['capture_automatic_gain_exposure_image']:
-        num_images_auto_calibration = 5
-        camera.StartGrabbingMax(num_images_auto_calibration + 1)
-
-        i = 0
-        while camera.IsGrabbing():
-        # Wait for an image and then retrieve it. A timeout of 5000 ms is used.
-            grabResult = camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
-                
-            if grabResult.GrabSucceeded():
-                # Access the image data.
-                img = converter.Convert(grabResult).GetArray()
-                if i < num_images_auto_calibration:
-                    i += 1
-                else:
-                    timestamp = dt.datetime.fromtimestamp(time.time()).strftime('%Y%m%dT%H%M%S')
-                    f_name = '{}/{}'.format(data_directory, '{}_gain_auto_exposure_auto.jpg'.format(timestamp))
-                    print('Writing image to {}'.format(f_name))
-                    cv2.imwrite(f_name, img)
-                    print("Auto settings images captured!")
-                    break
-                grabResult.Release()
-            else:
-                print("Error: ", grabResult.ErrorCode, grabResult.ErrorDescription)
-
-    # iterate over predefined gain and exposure values
-
-    camera.ExposureAuto.SetValue('Off')
-    camera.GainAuto.SetValue('Off')
-    exposure_time_abs = camera.ExposureTimeAbs
-    gain_raw = camera.GainRaw
-    number_of_images_to_capture = len(optical_inputs['exposure_values']) * len(optical_inputs['gain_values']) 
-    
-    camera.StartGrabbingMax(50)
-
-    exposure_gain_combinations = list(itertools.product(optical_inputs['exposure_values'], optical_inputs['gain_values']))
-    print(exposure_gain_combinations)
+    # pylon.FeaturePersistence.Save('{}/settings.pfs'.format(data_directory), node_map)
+    # with open('{}/optical_inputs.json'.format(data_directory), 'w') as f:
+    #     json.dump(optical_inputs, f, indent=4)
 
     i = 0
     first_iteration = True

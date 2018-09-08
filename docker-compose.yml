@@ -1,0 +1,23 @@
+version: '3.1'
+
+services:
+  pylon:
+    # image: gcr.io/ascendant-lore-182520/pylon:1.0.3
+    image: alok_pypylon:latest
+    command: sleep 1000h #csh -c 'cd /app/aquabyte/ && make && ./aquabyte'
+    volumes:
+       - /home/aquabyte/alok/pypylon/:/app/
+       - /aquabyte_data/:/aquabyte_data/
+       - /configs/pylon/:/root/config/
+    logging:
+      driver: journald
+      options:
+        tag: "pylon"
+    network_mode: host
+    container_name: deploy_pypylon
+
+secrets:
+  gcloud_credentials:
+    file: ./gcloud_credentials.json
+
+
