@@ -1,17 +1,3 @@
-
-# ============================================================================
-# This sample illustrates how to grab and process images from multiple cameras
-# using the CInstantCameraArray class. The CInstantCameraArray class represents
-# an array of instant camera objects. It provides almost the same interface
-# as the instant camera for grabbing.
-# The main purpose of the CInstantCameraArray is to simplify waiting for images and
-# camera events of multiple cameras in one thread. This is done by providing a single
-# RetrieveResult method for all cameras in the array.
-# Alternatively, the grabbing can be started using the internal grab loop threads
-# of all cameras in the CInstantCameraArray. The grabbed images can then be processed by one or more
-# image event handlers. Please note that this is not shown in this example.
-# ============================================================================
-
 import json
 import os
 import sys
@@ -24,14 +10,14 @@ from pypylon import pylon
 os.environ["PYLON_CAMEMU"] = "3"
 
 # Number of images to be grabbed.
-number_of_images_to_grab = 10
 maxCamerasToUse = 2
 
 # The exit code of the sample application.
 exitCode = 0
 
 config = json.load(open('/root/config/config.json', 'r'))
-farm_base_directory = os.path.join(config['base_directory'], config['farm_name'])
+farm_name = config['farm_name']
+farm_base_directory = os.path.join(config['base_directory'], farm_name)
 try:
 
     # get camera details by serial number
@@ -90,28 +76,32 @@ try:
     # start grabbing images
     timestamp_by_serial_number = {serial_number: 0 for serial_number in enclosure_details_by_serial_number.keys()}
     stereo_image_pair_timestamp_ms = None
-    for i in range(number_of_images_to_grab):
+    while True:
         if not cameras.IsGrabbing():
             break
 
         grab_result = cameras.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         camera_context_value = grab_result.GetCameraContext()
+
+        # ensure that the millisecond timestamp assigned to the stereo pairs updates such that left and right images
+        # have the same timestamp
         side = enclosure_details_by_serial_number[serial_number]['side']
+        pen_id = enclosure_details_by_serial_number[serial_number]['pen_id']
+        pen_name = enclosure_details_by_serial_number[serial_number]['pen_name']
         serial_number = cameras[camera_context_value].GetDeviceInfo().GetSerialNumber()
         other_camera_serial_number = enclosure_details_by_serial_number[serial_number]['other_camera_serial_number']
         other_camera_timestamp_ms = timestamp_by_serial_number[other_camera_serial_number]
         timestamp_ms = 8 * grab_result.ChunkTimestamp.Value
         timestamp_by_serial_number[serial_number] = timestamp_ms
-        print(abs(timestamp_ms - other_camera_timestamp_ms))
         if abs(timestamp_ms - other_camera_timestamp_ms) > 10e8:
-            stereo_image_pair_timestamp_ms = timestamp_ms
+            stereo_image_pair_timestamp_ms = int(round(time.time() * 1000)) # unix timestamp in milliseconds
 
         print('Timestamp for stereo image pair (ms) {}: {}'.format(serial_number, stereo_image_pair_timestamp_ms))
         img = grab_result.GetArray()
-        f_name = '{}_{}.jpg'.format(side, stereo_image_pair_timestamp_ms)
-        image_path = os.path.join(farm_base_directory, f_name)
+        f_name = '{}_{}_{}_{}.jpg'.format(side, farm_name, pen_id, stereo_image_pair_timestamp_ms)
+        image_path = os.path.join(farm_base_directory, pen_name, f_name)
         print('Writing image to {}'.format(image_path))
-        cv2.imwrite(f_name, img)
+        cv2.imwrite(image_path, img)
 
 except genicam.GenericException as e:
     print("An exception occurred.", e.GetDescription())
